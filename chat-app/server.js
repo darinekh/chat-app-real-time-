@@ -4,16 +4,44 @@ const mongoose = require('mongoose');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const cors = require('cors');
+const helmet = require('helmet');
+
+// Import authentication modules
+const { router: authRouter, initializeAuth } = require('./routes/auth');
+const { authenticateSocket, initializeAuthMiddleware } = require('./middleware/auth');
 
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// Security middleware
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "ws:", "wss:"],
+            fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+        },
+    },
+}));
+
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+}));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static files - serve React build
+app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/chatapp';
@@ -96,33 +124,64 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', messageSchema);
 
-// User Schema
+// User Schema for Authentication
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
         required: true,
         unique: true,
-        trim: true
+        trim: true,
+        minlength: 3,
+        maxlength: 20
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
     },
     socketId: {
         type: String,
-        required: true
+        default: null
     },
     room: {
         type: String,
         default: 'general'
     },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date,
+        default: Date.now
+    },
     joinedAt: {
         type: Date,
         default: Date.now
     }
+}, {
+    timestamps: true
 });
 
 const User = mongoose.model('User', userSchema);
 
-// Routes
+// Initialize authentication modules with User model
+initializeAuth(User);
+initializeAuthMiddleware(User);
+
+// Authentication routes
+app.use('/api/auth', authRouter);
+
+// Routes - serve React app
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // API Routes
@@ -151,35 +210,35 @@ app.get('/api/users/:room', async (req, res) => {
     }
 });
 
+// Socket.IO authentication middleware
+io.use(authenticateSocket);
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id);
+    console.log('New authenticated client connected:', socket.id, 'User:', socket.user.username);
 
-    // Handle user joining
+    // Handle user joining a room
     socket.on('join', async (data) => {
         try {
-            const { username, room = 'general' } = data;
-            
-            // Remove existing user with same username
-            await User.deleteMany({ username });
-            
-            // Create new user
-            const user = new User({
-                username,
+            const { room = 'general' } = data;
+            const user = socket.user; // User is already authenticated
+
+            // Update user's room and socket info
+            await User.findByIdAndUpdate(user._id, {
                 socketId: socket.id,
-                room
+                room,
+                isOnline: true,
+                lastSeen: new Date()
             });
-            await user.save();
 
             // Join the room
             socket.join(room);
-            socket.username = username;
             socket.room = room;
 
             // Notify room about new user
             socket.to(room).emit('userJoined', {
-                username,
-                message: `${username} joined the chat`,
+                username: user.username,
+                message: `${user.username} joined the chat`,
                 timestamp: new Date()
             });
 
@@ -205,17 +264,17 @@ io.on('connection', (socket) => {
     socket.on('sendMessage', async (data) => {
         try {
             const { message } = data;
-            const username = socket.username;
+            const user = socket.user;
             const room = socket.room || 'general';
 
-            if (!username || !message) {
-                return socket.emit('error', { message: 'Username and message are required' });
+            if (!message || !message.trim()) {
+                return socket.emit('error', { message: 'Message content is required' });
             }
 
             // Save message to database
             const newMessage = new Message({
-                username,
-                message,
+                username: user.username,
+                message: message.trim(),
                 room,
                 timestamp: new Date()
             });
@@ -223,8 +282,8 @@ io.on('connection', (socket) => {
 
             // Broadcast message to room
             io.to(room).emit('newMessage', {
-                username,
-                message,
+                username: user.username,
+                message: message.trim(),
                 timestamp: newMessage.timestamp,
                 room
             });
@@ -238,7 +297,7 @@ io.on('connection', (socket) => {
     // Handle typing indicators
     socket.on('typing', (data) => {
         socket.to(socket.room || 'general').emit('userTyping', {
-            username: socket.username,
+            username: socket.user.username,
             isTyping: data.isTyping
         });
     });
@@ -246,16 +305,20 @@ io.on('connection', (socket) => {
     // Handle disconnection
     socket.on('disconnect', async () => {
         try {
-            console.log('Client disconnected:', socket.id);
-            
-            if (socket.username && socket.room) {
-                // Remove user from database
-                await User.deleteOne({ socketId: socket.id });
+            console.log('Client disconnected:', socket.id, 'User:', socket.user.username);
+
+            if (socket.user && socket.room) {
+                // Update user status in database
+                await User.findByIdAndUpdate(socket.user._id, {
+                    isOnline: false,
+                    lastSeen: new Date(),
+                    socketId: null
+                });
 
                 // Notify room about user leaving
                 socket.to(socket.room).emit('userLeft', {
-                    username: socket.username,
-                    message: `${socket.username} left the chat`,
+                    username: socket.user.username,
+                    message: `${socket.user.username} left the chat`,
                     timestamp: new Date()
                 });
 
