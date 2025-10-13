@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Login Form -->
+        <div id="loginForm" class="login-form">
+            <div class="login-card">
+                <h2><i class="fas fa-comments"></i> Join Chat</h2>
+                <form id="joinForm">
+                    <div class="input-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" placeholder="Enter your username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="room">Room:</label>
+                        <select id="room">
+                            <option value="general">General</option>
+                            <option value="tech">Tech Talk</option>
+                            <option value="random">Random</option>
+                            <option value="gaming">Gaming</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="join-btn">
+                        <i class="fas fa-sign-in-alt"></i> Join Chat
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div id="chatInterface" class="chat-interface" style="display: none;">
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="header-left">
+                    <h3><i class="fas fa-hashtag"></i> <span id="currentRoom">general</span></h3>
+                    <span id="userCount" class="user-count">0 users online</span>
+                </div>
+                <div class="header-right">
+                    <span id="currentUser" class="current-user"></span>
+                    <button id="leaveBtn" class="leave-btn">
+                        <i class="fas fa-sign-out-alt"></i> Leave
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-main">
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <div class="sidebar-section">
+                        <h4><i class="fas fa-users"></i> Online Users</h4>
+                        <div id="userList" class="user-list"></div>
+                    </div>
+                </div>
+
+                <!-- Chat Area -->
+                <div class="chat-area">
+                    <div id="messages" class="messages"></div>
+                    <div id="typingIndicator" class="typing-indicator"></div>
+                    
+                    <!-- Message Input -->
+                    <div class="message-input-container">
+                        <div class="message-input">
+                            <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+                            <button id="sendBtn" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
