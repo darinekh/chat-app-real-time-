@@ -14,7 +14,15 @@ const { authenticateSocket, initializeAuthMiddleware } = require('./middleware/a
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['polling', 'websocket'],
+    allowEIO3: true
+});
 
 // Security middleware
 app.use(helmet({
@@ -31,8 +39,12 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    credentials: true
+    origin: process.env.NODE_ENV === 'production'
+        ? [process.env.CLIENT_URL, 'https://*.vercel.app']
+        : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Body parsing middleware
@@ -338,11 +350,15 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Visit http://localhost:${PORT} to access the chat application`);
-});
+// Start server (only if not in Vercel environment)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Visit http://localhost:${PORT} to access the chat application`);
+    });
+}
 
-module.exports = { app, server, io };
+module.exports = app; // Export app for Vercel
+module.exports.server = server;
+module.exports.io = io;

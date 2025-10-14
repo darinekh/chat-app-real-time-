@@ -7,6 +7,7 @@
     "dev": "nodemon server.js",
     "client": "webpack serve --mode development",
     "build": "webpack --mode production",
+    "vercel-build": "npm run build",
     "dev:full": "concurrently \"npm run dev\" \"npm run client\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
