@@ -46,7 +46,7 @@ app.use(helmet({
 
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? [process.env.CLIENT_URL, 'https://*.vercel.app']
+        ? [process.env.CLIENT_URL, 'https://*.vercel.app', 'https://*.onrender.com']
         : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -307,6 +307,25 @@ initializeChatRoomRoutes(ChatRoom, User);
 // Initialize invitation routes with models
 initializeInvitationRoutes(ChatRoom, User, Invitation);
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        message: 'Chat App API is running!',
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // Authentication routes
 app.use('/api/auth', authRouter);
 
@@ -532,12 +551,19 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server (only if not in Vercel environment)
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+// Start server (only if not in serverless environment)
+if (process.env.NODE_ENV !== 'production' || (!process.env.VERCEL && !process.env.RENDER)) {
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         console.log(`Visit http://localhost:${PORT} to access the chat application`);
+    });
+} else {
+    // For production deployment (Render, Vercel, etc.)
+    const PORT = process.env.PORT || 10000;
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV}`);
     });
 }
 
