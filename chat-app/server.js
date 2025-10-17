@@ -7,6 +7,27 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 
+// Environment validation
+console.log('🔧 Environment Configuration:');
+console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('PORT:', process.env.PORT || 'not set (will use default)');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
+console.log('CLIENT_URL:', process.env.CLIENT_URL || 'not set');
+
+// Validate required environment variables in production
+if (process.env.NODE_ENV === 'production') {
+    const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+    if (missingVars.length > 0) {
+        console.error('❌ Missing required environment variables:', missingVars);
+        console.error('💡 Please set these environment variables in your Render dashboard');
+        process.exit(1);
+    }
+    console.log('✅ All required environment variables are set');
+}
+
 // Import authentication modules
 const { router: authRouter, initializeAuth } = require('./routes/auth');
 const { authenticateSocket, authenticateToken, initializeAuthMiddleware } = require('./middleware/auth');
@@ -70,11 +91,15 @@ console.log('MongoDB URI:', MONGODB_URI.replace(/\/\/.*@/, '//***:***@')); // Hi
 // MongoDB connection with retry logic
 const connectToMongoDB = async () => {
     try {
+        console.log('🔌 Connecting to MongoDB...');
+        console.log('📍 MongoDB URI:', MONGODB_URI ? 'Set' : 'Not set');
+
         await mongoose.connect(MONGODB_URI);
         console.log('✅ Successfully connected to MongoDB');
         console.log('📊 Database:', mongoose.connection.name);
     } catch (error) {
         console.error('❌ MongoDB connection error:', error.message);
+        console.error('🔍 Full error:', error);
 
         if (error.message.includes('ECONNREFUSED')) {
             console.log('\n🔧 MongoDB Connection Help:');
@@ -82,11 +107,21 @@ const connectToMongoDB = async () => {
             console.log('2. Or update MONGODB_URI in .env file to use MongoDB Atlas');
             console.log('3. For local MongoDB, run: mongod');
             console.log('4. For MongoDB Atlas, get your connection string from: https://cloud.mongodb.com\n');
+        } else if (error.message.includes('authentication')) {
+            console.log('\n🔐 Authentication Error:');
+            console.log('1. Check your MongoDB username and password');
+            console.log('2. Ensure the user has proper permissions');
+            console.log('3. Verify the connection string format\n');
         }
 
-        // Retry connection after 5 seconds
-        console.log('🔄 Retrying connection in 5 seconds...');
-        setTimeout(connectToMongoDB, 5000);
+        if (process.env.NODE_ENV === 'production') {
+            console.error('💥 Production MongoDB connection failed. Exiting...');
+            process.exit(1);
+        } else {
+            // Retry connection after 5 seconds in development
+            console.log('🔄 Retrying connection in 5 seconds...');
+            setTimeout(connectToMongoDB, 5000);
+        }
     }
 };
 
@@ -551,21 +586,31 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server (only if not in serverless environment)
-if (process.env.NODE_ENV !== 'production' || (!process.env.VERCEL && !process.env.RENDER)) {
-    const PORT = process.env.PORT || 3000;
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`Visit http://localhost:${PORT} to access the chat application`);
-    });
-} else {
-    // For production deployment (Render, Vercel, etc.)
-    const PORT = process.env.PORT || 10000;
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`Environment: ${process.env.NODE_ENV}`);
-    });
-}
+// Start server
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+
+console.log(`Starting server...`);
+console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`Port: ${PORT}`);
+console.log(`Host: ${HOST}`);
+
+server.listen(PORT, HOST, (err) => {
+    if (err) {
+        console.error('❌ Failed to start server:', err);
+        process.exit(1);
+    }
+
+    console.log(`✅ Server running on ${HOST}:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    if (process.env.NODE_ENV === 'production') {
+        console.log(`🚀 Production server ready!`);
+    } else {
+        console.log(`🔧 Development server ready!`);
+        console.log(`📱 Visit http://localhost:${PORT} to access the chat application`);
+    }
+});
 
 module.exports = app; // Export app for Vercel
 module.exports.server = server;
