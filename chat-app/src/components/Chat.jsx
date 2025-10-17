@@ -64,11 +64,9 @@ const Chat = () => {
                 }]);
             });
 
-            // Listen for room user list updates
-            socket.on('roomUserList', (data) => {
-                if (data.room === currentRoom) {
-                    setUsers(data.users || []);
-                }
+            // Listen for user list updates
+            socketService.onUserList((userList) => {
+                setUsers(userList || []);
             });
 
             socketService.onUserTyping((data) => {
@@ -86,6 +84,14 @@ const Chat = () => {
 
             socketService.onError((error) => {
                 console.error('Socket error:', error);
+            });
+
+            // Listen for room change confirmations
+            socket.on('roomChanged', (data) => {
+                console.log('Room changed:', data);
+                setCurrentRoom(data.room);
+                setMessages([]); // Clear messages when room changes
+                setTypingUsers([]); // Clear typing indicators
             });
 
         } catch (error) {
@@ -164,6 +170,38 @@ const Chat = () => {
         setTypingUsers([]); // Clear typing indicators
     };
 
+    const handleStartPrivateChat = async (targetUsername) => {
+        try {
+            // Create or find a private room for the two users
+            const roomName = `private_${[user.username, targetUsername].sort().join('_')}`;
+
+            // For now, we'll show an alert. Later this can be enhanced to create actual private rooms
+            alert(`Private chat with ${targetUsername} will be implemented soon!\n\nRoom would be: ${roomName}`);
+
+            // TODO: Implement private room creation and joining
+            // const response = await fetch('/api/rooms/private', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //         'Authorization': `Bearer ${authService.getToken()}`
+            //     },
+            //     body: JSON.stringify({
+            //         participants: [user.username, targetUsername],
+            //         name: roomName
+            //     })
+            // });
+            //
+            // if (response.ok) {
+            //     const room = await response.json();
+            //     handleRoomChange(room.name);
+            // }
+
+        } catch (error) {
+            console.error('Error starting private chat:', error);
+            alert('Failed to start private chat. Please try again.');
+        }
+    };
+
     const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString([], { 
             hour: '2-digit', 
@@ -223,10 +261,24 @@ const Chat = () => {
                                 Online Users
                             </h4>
                             <div className="user-list">
-                                {users.map((user, index) => (
-                                    <div key={index} className="user-item">
+                                {users.map((userItem, index) => (
+                                    <div
+                                        key={index}
+                                        className={`user-item ${(userItem.username || userItem) === user.username ? 'current-user' : ''}`}
+                                        onClick={() => {
+                                            const targetUsername = userItem.username || userItem;
+                                            if (targetUsername !== user.username) {
+                                                handleStartPrivateChat(targetUsername);
+                                            }
+                                        }}
+                                        style={{
+                                            cursor: (userItem.username || userItem) === user.username ? 'default' : 'pointer'
+                                        }}
+                                        title={(userItem.username || userItem) === user.username ? 'This is you' : `Start private chat with ${userItem.username || userItem}`}
+                                    >
                                         <i className="fas fa-circle online-indicator"></i>
-                                        {user.username || user}
+                                        {userItem.username || userItem}
+                                        {(userItem.username || userItem) === user.username && ' (You)'}
                                     </div>
                                 ))}
                             </div>

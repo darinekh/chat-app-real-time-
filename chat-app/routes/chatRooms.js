@@ -320,4 +320,46 @@ router.get('/:roomId/members', async (req, res) => {
     }
 });
 
+// GET /api/rooms/:roomId/invitations - Get invitations for a room (room members only)
+router.get('/:roomId/invitations', async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const userId = req.user.id;
+
+        // Validate roomId
+        if (!mongoose.Types.ObjectId.isValid(roomId)) {
+            return res.status(400).json({ error: 'Invalid room ID' });
+        }
+
+        // Find the room and check if user is a member
+        const room = await ChatRoom.findOne({ _id: roomId, isActive: true });
+        if (!room) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        if (!room.members.includes(userId)) {
+            return res.status(403).json({ error: 'You must be a member of the room to view invitations' });
+        }
+
+        // Get invitations for this room
+        const Invitation = mongoose.model('Invitation');
+        const invitations = await Invitation.find({
+            roomId,
+            status: { $in: ['pending', 'accepted'] }
+        })
+        .populate('invitedBy', 'username')
+        .populate('invitedUser', 'username')
+        .sort({ createdAt: -1 })
+        .limit(50);
+
+        res.json({
+            success: true,
+            invitations
+        });
+    } catch (error) {
+        console.error('Error fetching room invitations:', error);
+        res.status(500).json({ error: 'Failed to fetch room invitations' });
+    }
+});
+
 module.exports = { router, initializeChatRoomRoutes };

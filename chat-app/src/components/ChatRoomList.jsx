@@ -190,9 +190,15 @@ const ChatRoomList = ({ currentRoom, onRoomChange, onRoomJoined }) => {
                     </div>
                 ) : (
                     rooms.map(room => (
-                        <div 
-                            key={room._id} 
+                        <div
+                            key={room._id}
                             className={`room-item ${currentRoom === room.name ? 'active' : ''}`}
+                            onClick={() => {
+                                if (currentRoom !== room.name) {
+                                    handleJoinRoom(room._id, room.name);
+                                }
+                            }}
+                            style={{ cursor: currentRoom === room.name ? 'default' : 'pointer' }}
                         >
                             <div className="room-info">
                                 <div className="room-header">
@@ -228,9 +234,12 @@ const ChatRoomList = ({ currentRoom, onRoomChange, onRoomJoined }) => {
 
                             <div className="room-actions">
                                 {currentRoom === room.name ? (
-                                    <button 
+                                    <button
                                         className="btn btn-secondary btn-sm"
-                                        onClick={() => handleLeaveRoom(room._id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleLeaveRoom(room._id);
+                                        }}
                                         disabled={room.name === 'general'}
                                         title={room.name === 'general' ? 'Cannot leave general room' : 'Leave room'}
                                     >
@@ -238,9 +247,12 @@ const ChatRoomList = ({ currentRoom, onRoomChange, onRoomJoined }) => {
                                         {room.name === 'general' ? 'Current' : 'Leave'}
                                     </button>
                                 ) : (
-                                    <button 
+                                    <button
                                         className="btn btn-primary btn-sm"
-                                        onClick={() => handleJoinRoom(room._id, room.name)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleJoinRoom(room._id, room.name);
+                                        }}
                                         disabled={joiningRoom === room._id}
                                     >
                                         {joiningRoom === room._id ? (

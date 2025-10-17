@@ -1,0 +1,239 @@
+.invitations-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.invitations-header {
+    padding: 20px 24px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.invitations-header h3 {
+    margin: 0 0 16px 0;
+    color: #2c3e50;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border: 2px solid #e1e5e9;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #6c757d;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.tab-btn.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.loading {
+    padding: 40px;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 16px 24px;
+    border: 1px solid #f5c6cb;
+    margin: 0;
+}
+
+.invitations-list {
+    padding: 16px 24px 24px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.no-invitations {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+.invitation-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: #fafbfc;
+    transition: all 0.2s ease;
+}
+
+.invitation-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.invitation-card:last-child {
+    margin-bottom: 0;
+}
+
+.invitation-info {
+    flex: 1;
+}
+
+.invitation-info h4 {
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.invitation-from,
+.invitation-type,
+.invitation-usage,
+.invitation-expires {
+    margin: 4px 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.invitation-message {
+    margin: 8px 0;
+    font-size: 0.9rem;
+    color: #495057;
+    font-style: italic;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #007bff;
+}
+
+.invitation-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.btn-accept,
+.btn-revoke {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 70px;
+}
+
+.btn-accept {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-accept:hover {
+    background-color: #218838;
+}
+
+.btn-revoke {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-revoke:hover {
+    background-color: #c82333;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-badge.expired {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.used {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .invitations-header {
+        padding: 16px 20px;
+    }
+    
+    .invitations-list {
+        padding: 12px 20px 20px;
+    }
+    
+    .invitation-card {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .invitation-actions {
+        flex-direction: row;
+        align-items: center;
+        align-self: stretch;
+        justify-content: flex-end;
+    }
+    
+    .tab-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .tab-btn {
+        text-align: center;
+    }
+}
+
+/* Scrollbar styling */
+.invitations-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.invitations-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.invitations-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.invitations-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
